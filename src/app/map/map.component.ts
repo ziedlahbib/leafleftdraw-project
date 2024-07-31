@@ -65,9 +65,7 @@ export class MapComponent implements AfterViewInit {
         polygon: {
           shapeOptions: styleOptions
         },
-        rectangle: {
-          shapeOptions: styleOptions
-        },
+        rectangle: <any>{ showArea: false },
         polyline: {
           shapeOptions: styleOptions
         },
