@@ -49,9 +49,20 @@ export class MapComponent implements AfterViewInit {
       editMode: true,
       rotateMode: true
     };
-
+    var MyCustomMarker = L.icon({
+      shadowUrl: null,
+      iconAnchor: new L.Point(12, 12),
+      iconSize: new L.Point(24, 24),
+      iconUrl:
+        'https://upload.wikimedia.org/wikipedia/commons/6/6b/Information_icon4_orange.svg',
+    });
     this.map.pm.addControls(options);
-
+    var infoMarker = this.map.pm.Toolbar.copyDrawControl('drawMarker', {
+      name: 'infoMarker',
+    });
+    infoMarker.drawInstance.setOptions({
+      markerStyle: { icon: MyCustomMarker },
+    });
     // Copy the draw control for rectangle
     var drawRectangle = this.map.pm.Toolbar.copyDrawControl('drawRectangle', {
       name: 'modifiedRectangle',
