@@ -74,14 +74,29 @@ export class MapComponent implements AfterViewInit {
 
     
     // Update the rectangle to a polygon shape including the new point
-    const newLatLngs = [
+    const corners  = [
       bounds.getNorthWest(),
       bounds.getNorthEast(),
       bounds.getSouthEast(),
       bounds.getSouthWest(),
       center // Add the center point to create a new shape
     ];
-    
+    const midpoints = [
+      L.latLng((corners[0].lat + corners[1].lat) / 2, (corners[0].lng + corners[1].lng) / 2),
+      L.latLng((corners[1].lat + corners[2].lat) / 2, (corners[1].lng + corners[2].lng) / 2),
+      L.latLng((corners[2].lat + corners[3].lat) / 2, (corners[2].lng + corners[3].lng) / 2),
+      L.latLng((corners[3].lat + corners[0].lat) / 2, (corners[3].lng + corners[0].lng) / 2)
+    ];
+    const newLatLngs = [
+      bounds.getNorthWest(),
+      midpoints[0],
+      bounds.getNorthEast(),
+      midpoints[1],
+      bounds.getSouthEast(),
+      midpoints[2],
+      bounds.getSouthWest(),
+      midpoints[3],
+    ];
     // Remove the original rectangle
     this.map.removeLayer(rectangle);
 
@@ -90,6 +105,8 @@ export class MapComponent implements AfterViewInit {
     newShape.addTo(this.map);
   }
 
+  
+  
   private addMarker(L: any, position: [number, number]): void {
     const defaultIcon = L.icon({
       iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
