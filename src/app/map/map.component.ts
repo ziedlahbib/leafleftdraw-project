@@ -52,13 +52,30 @@ export class MapComponent implements AfterViewInit {
 
     this.map.pm.addControls(options);
 
+    // Copy the draw control for rectangle
+    var drawRectangle = this.map.pm.Toolbar.copyDrawControl('drawRectangle', {
+      name: 'modifiedRectangle',
+      block: 'custom',
+      title: 'Draw a modified rectangle' // Tooltip text
+    });
+
+
+
+    // Handle the creation of shapes
     this.map.on('pm:create', (e: any) => {
       const layer = e.layer;
-      if (layer instanceof L.Rectangle) {
+      const shape = e.shape; // Check the shape type
+
+      if (shape === 'modifiedRectangle' && layer instanceof L.Rectangle) {
+        console.log('modified rectangle created')
         this.addPointToRectangle(layer);
+      } else if (shape === 'Rectangle' && layer instanceof L.Rectangle) {
+        // Handle the default rectangle creation
+        console.log('Default rectangle created');
       }
     });
 
+    // Event listeners for custom modes with explicit types
     this.map.on('pm:remove', (e: any) => {
       console.log('Layer removed:', e);
     });
@@ -70,33 +87,31 @@ export class MapComponent implements AfterViewInit {
 
   private addPointToRectangle(rectangle: L.Rectangle): void {
     const bounds = rectangle.getBounds();
-    const center = bounds.getCenter();
-
-    
-    // Update the rectangle to a polygon shape including the new point
-    const corners  = [
+    const corners = [
       bounds.getNorthWest(),
       bounds.getNorthEast(),
       bounds.getSouthEast(),
-      bounds.getSouthWest(),
-      center // Add the center point to create a new shape
+      bounds.getSouthWest()
     ];
+
     const midpoints = [
       L.latLng((corners[0].lat + corners[1].lat) / 2, (corners[0].lng + corners[1].lng) / 2),
       L.latLng((corners[1].lat + corners[2].lat) / 2, (corners[1].lng + corners[2].lng) / 2),
       L.latLng((corners[2].lat + corners[3].lat) / 2, (corners[2].lng + corners[3].lng) / 2),
       L.latLng((corners[3].lat + corners[0].lat) / 2, (corners[3].lng + corners[0].lng) / 2)
     ];
+
     const newLatLngs = [
-      bounds.getNorthWest(),
+      corners[0],
       midpoints[0],
-      bounds.getNorthEast(),
+      corners[1],
       midpoints[1],
-      bounds.getSouthEast(),
+      corners[2],
       midpoints[2],
-      bounds.getSouthWest(),
-      midpoints[3],
+      corners[3],
+      midpoints[3]
     ];
+
     // Remove the original rectangle
     this.map.removeLayer(rectangle);
 
@@ -105,8 +120,6 @@ export class MapComponent implements AfterViewInit {
     newShape.addTo(this.map);
   }
 
-  
-  
   private addMarker(L: any, position: [number, number]): void {
     const defaultIcon = L.icon({
       iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
