@@ -1,6 +1,7 @@
 import { Component, AfterViewInit } from '@angular/core';
 import * as L from 'leaflet';
-import 'leaflet-draw';
+import '@geoman-io/leaflet-geoman-free';
+
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
@@ -8,30 +9,19 @@ import 'leaflet-draw';
 })
 export class MapComponent implements AfterViewInit {
   private map: any;
-  private drawnItems: any; // To hold drawn items
 
   constructor() { }
 
   ngAfterViewInit(): void {
-    if (typeof window !== 'undefined') {
-      this.loadLeaflet().then(L => {
-        this.getPosition().then((pos) => {
-          this.initMap(L, [pos.lat, pos.lng]);
-          this.addMarker(L, [pos.lat, pos.lng]);
-        }).catch((err) => {
-          console.error(err);
-          const defaultPos: [number, number] = [39.8282, -98.5795];
-          this.initMap(L, defaultPos);
-          this.addMarker(L, defaultPos);
-        });
-      });
-    }
-  }
-
-  private async loadLeaflet() {
-    const L = await import('leaflet');
-    await import('leaflet-draw'); // Import Leaflet Draw
-    return L;
+    this.getPosition().then((pos) => {
+      this.initMap(L, [pos.lat, pos.lng]);
+      this.addMarker(L, [pos.lat, pos.lng]);
+    }).catch((err) => {
+      console.error(err);
+      const defaultPos: [number, number] = [39.8282, -98.5795];
+      this.initMap(L, defaultPos);
+      this.addMarker(L, defaultPos);
+    });
   }
 
   private initMap(L: any, center: [number, number]): void {
@@ -40,121 +30,95 @@ export class MapComponent implements AfterViewInit {
       zoom: 3
     });
 
-    const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+    L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
       maxZoom: 20,
-      subdomains:['mt0','mt1','mt2','mt3']
-    });
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    }).addTo(this.map);
 
-    googleHybrid.addTo(this.map);
-
-    // Initialize Leaflet Draw
-    this.drawnItems = L.featureGroup().addTo(this.map);
-    const styleOptions: L.PolylineOptions = {
-      color: 'blue',
-      weight: 4,
-      opacity: 0.8,
-      fillColor: 'blue',
-      fillOpacity: 0.3
+    const options = {
+      position: 'topright',
+      drawMarker: false,
+      drawPolygon: true,
+      drawPolyline: true,
+      drawCircle: true,
+      drawCircleMarker: true,
+      drawRectangle: true,
+      cutPolygon: true,
+      dragMode: true,
+      deleteLayer: true,
+      editMode: true,
+      rotateMode: true
     };
 
-    const drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: this.drawnItems
-      },
-      draw: {
-        polygon: {
-          shapeOptions: styleOptions
-        },
-        rectangle: <any>{ showArea: false },
-        polyline: {
-          shapeOptions: styleOptions
-        },
-        circle: false,
-        marker: false
+    this.map.pm.addControls(options);
+
+    this.map.on('pm:create', (e: any) => {
+      const layer = e.layer;
+      if (layer instanceof L.Rectangle) {
+        this.addPointToRectangle(layer);
       }
     });
-    this.map.addControl(drawControl);
 
-    // Handle shape creation
-    this.map.on(L.Draw.Event.CREATED, (event: any) => {
-      const layer = event.layer;
-      if (layer instanceof L.Polygon || layer instanceof L.Polyline || layer instanceof L.Rectangle) {
-        layer.setStyle(styleOptions); // Apply style options to the drawn shape
-      }
-      this.drawnItems.addLayer(layer);
+    this.map.on('pm:remove', (e: any) => {
+      console.log('Layer removed:', e);
+    });
 
-      // Extract and log coordinates
-      this.extractAndLogCoordinates(layer);
+    this.map.on('pm:edit', (e: any) => {
+      console.log('Layer edited:', e);
     });
   }
 
-  private extractAndLogCoordinates(layer: any): void {
-    let coordinates: any;
+  private addPointToRectangle(rectangle: L.Rectangle): void {
+    const bounds = rectangle.getBounds();
+    const center = bounds.getCenter();
+    
+    // Add a point marker in the middle of the rectangle
+    // const pointMarker = L.marker(center, {
+    //   icon: L.icon({
+    //     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    //     iconSize: [25, 41]
+    //   })
+    // });
+    // pointMarker.addTo(this.map);
+    
+    // Update the rectangle to a polygon shape including the new point
+    const newLatLngs = [
+      bounds.getNorthWest(),
+      bounds.getNorthEast(),
+      bounds.getSouthEast(),
+      bounds.getSouthWest(),
+      center // Add the center point to create a new shape
+    ];
+    
+    // Remove the original rectangle
+    this.map.removeLayer(rectangle);
 
-    if (layer instanceof L.Polygon) {
-      coordinates = layer.getLatLngs();
-    } else if (layer instanceof L.Polyline) {
-      coordinates = layer.getLatLngs();
-    } else if (layer instanceof L.Rectangle) {
-      coordinates = layer.getBounds();
-    } else if (layer instanceof L.Circle) {
-      coordinates = {
-        center: layer.getLatLng(),
-        radius: layer.getRadius()
-      };
-    } else {
-      coordinates = 'Unknown shape type';
-    }
-
-    console.log('Coordinates:', coordinates);
+    // Create a new polygon with the updated shape
+    const newShape = L.polygon(newLatLngs, { color: 'blue', fillOpacity: 0.3 });
+    newShape.addTo(this.map);
   }
 
   private addMarker(L: any, position: [number, number]): void {
-    const myIcon = L.icon({
-      iconUrl: 'assets/—Pngtree—hand drawn stereo position positioning_5494340.png', // Replace with your icon image path
-      iconSize: [25, 41], // Icon size
-      iconAnchor: [12, 41], // Icon anchor point
-      popupAnchor: [1, -34] // Popup anchor point
+    const defaultIcon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34]
     });
 
-    const marker = L.marker(position, { icon: myIcon });
-    marker.addTo(this.map);
+    L.marker(position, { icon: defaultIcon }).addTo(this.map);
   }
 
   private getPosition(): Promise<{ lng: number, lat: number }> {
     return new Promise((resolve, reject) => {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(resp => {
-          resolve({ lng: resp.coords.longitude, lat: resp.coords.latitude });
-        },
-        err => {
-          reject(err);
-        });
+        navigator.geolocation.getCurrentPosition(
+          resp => resolve({ lng: resp.coords.longitude, lat: resp.coords.latitude }),
+          err => reject(err)
+        );
       } else {
         reject(new Error('Geolocation is not available'));
       }
     });
   }
 }
-// googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
-//   maxZoom: 20,
-//   subdomains:['mt0','mt1','mt2','mt3']
-// });
-// Hybrid:
-
-// googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
-//   maxZoom: 20,
-//   subdomains:['mt0','mt1','mt2','mt3']
-// });
-// Satellite:
-
-// googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
-//   maxZoom: 20,
-//   subdomains:['mt0','mt1','mt2','mt3']
-// });
-// Terrain
-
-// googleTerrain = L.tileLayer('http://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',{
-//   maxZoom: 20,
-//   subdomains:['mt0','mt1','mt2','mt3']
-// });
