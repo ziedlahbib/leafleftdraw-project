@@ -71,15 +71,7 @@ export class MapComponent implements AfterViewInit {
   private addPointToRectangle(rectangle: L.Rectangle): void {
     const bounds = rectangle.getBounds();
     const center = bounds.getCenter();
-    
-    // Add a point marker in the middle of the rectangle
-    // const pointMarker = L.marker(center, {
-    //   icon: L.icon({
-    //     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    //     iconSize: [25, 41]
-    //   })
-    // });
-    // pointMarker.addTo(this.map);
+
     
     // Update the rectangle to a polygon shape including the new point
     const newLatLngs = [
