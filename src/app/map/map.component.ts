@@ -15,6 +15,7 @@ export class MapComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     this.getPosition().then((pos) => {
       this.initMap(L, [pos.lat, pos.lng]);
+      this.map.setView(new L.LatLng(pos.lat, pos.lng), 10);
       this.addMarker(L, [pos.lat, pos.lng]);
     }).catch((err) => {
       console.error(err);
@@ -25,16 +26,44 @@ export class MapComponent implements AfterViewInit {
   }
 
   private initMap(L: any, center: [number, number]): void {
-    this.map = L.map('map', {
-      center: center,
-      zoom: 3
-    });
+    // this.map = L.map('map', {
+    //   center: center,
+    //   zoom: 3
+    // });
 
-    L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+    // L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+    //   maxZoom: 20,
+    //   subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    // }).addTo(this.map);
+    this.map = new L.Map('map', {
+      zoomControl: true,
       maxZoom: 20,
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-    }).addTo(this.map);
-
+      minZoom: 5,
+      center: center,
+      zoom: 10
+    });
+    this.map.zoomControl.setPosition('bottomleft');
+    const tileLayers = {
+      'google Satellite': L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&hl=tr&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        maxNativeZoom: 20,
+        zIndex: 0,
+        maxZoom: 20
+      }).addTo(this.map),
+      'google Streets ': L.tileLayer('https://{s}.google.com/vt/lyrs=m&hl=tr&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        zIndex: 0,
+        maxNativeZoom: 21,
+        maxZoom: 21
+      }),
+      'google Hybrid ': L.tileLayer('https://{s}.google.com/vt/lyrs=p&hl=tr&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        zIndex: 0,
+        maxNativeZoom: 21,
+        maxZoom: 21
+      })
+    };
+    L.control.layers(tileLayers, null, {collapsed: false, position: 'topleft'}).addTo(this.map);
     const options = {
       position: 'topright',
       drawMarker: false,
@@ -94,6 +123,8 @@ export class MapComponent implements AfterViewInit {
     this.map.on('pm:edit', (e: any) => {
       console.log('Layer edited:', e);
     });
+    /////////////////trajectoire
+    
   }
 
   private addPointToRectangle(rectangle: L.Rectangle): void {
