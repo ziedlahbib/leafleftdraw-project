@@ -1,7 +1,7 @@
 import { Component, AfterViewInit } from '@angular/core';
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
-
+import 'leaflet-routing-machine';
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
@@ -9,11 +9,13 @@ import '@geoman-io/leaflet-geoman-free';
 })
 export class MapComponent implements AfterViewInit {
   private map: any;
-
+  private routingControl: any;
+  private startpointPosition: any;
   constructor() { }
 
   ngAfterViewInit(): void {
     this.getPosition().then((pos) => {
+      this.startpointPosition = L.latLng(pos.lat, pos.lng); 
       this.initMap(L, [pos.lat, pos.lng]);
       this.map.setView(new L.LatLng(pos.lat, pos.lng), 10);
       this.addMarker(L, [pos.lat, pos.lng]);
@@ -83,7 +85,7 @@ export class MapComponent implements AfterViewInit {
       iconAnchor: new L.Point(12, 12),
       iconSize: new L.Point(24, 24),
       iconUrl:
-        'https://upload.wikimedia.org/wikipedia/commons/6/6b/Information_icon4_orange.svg',
+        'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
     });
     this.map.pm.addControls(options);
     var infoMarker = this.map.pm.Toolbar.copyDrawControl('drawMarker', {
@@ -106,7 +108,27 @@ export class MapComponent implements AfterViewInit {
       const layer = e.layer;
       const shape = e.shape; // Check the shape type
 
-      if (shape === 'modifiedRectangle' && layer instanceof L.Rectangle) {
+      if (shape === 'infoMarker' && layer instanceof L.Marker) {
+        const markerPosition = layer.getLatLng();
+
+        // If there's an existing routing control, remove it
+        if (this.routingControl) {
+          this.routingControl.remove();
+        }
+
+        // Add routing control with the new coordinates
+        this.routingControl = L.Routing.control({
+          waypoints: [
+            this.startpointPosition,
+            markerPosition // Set this to your desired end waypoint
+          ],
+          createMarker: () => null, // This hides the markers
+          routeWhileDragging: true,
+          showAlternatives: true
+        }).addTo(this.map);
+        
+      }
+      else if (shape === 'modifiedRectangle' && layer instanceof L.Rectangle) {
         console.log('modified rectangle created')
         this.addPointToRectangle(layer);
       } else if (shape === 'Rectangle' && layer instanceof L.Rectangle) {
